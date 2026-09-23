@@ -380,7 +380,7 @@ curl http://localhost:3002/listings/{listing_id}
 ## Getting Help
 
 - Check `README.md` for overview and vision
-- See `spec/v0.2.md` for complete specification
+- See `spec/v0.3.md` for complete specification
 - Review `validator/README.md` for validator details
 - Check `registry/README.md` for registry API reference
 - See README for how to add manifests to your API

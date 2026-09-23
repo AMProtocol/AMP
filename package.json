@@ -15,7 +15,9 @@
     "build": "npm run build --workspaces",
     "test": "npm test --workspaces",
     "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down"
+    "docker:down": "docker-compose down",
+    "sync-schemas": "node scripts/sync-schemas.mjs",
+    "check-schemas": "node scripts/sync-schemas.mjs --check"
   },
   "keywords": [
     "ai-agents",

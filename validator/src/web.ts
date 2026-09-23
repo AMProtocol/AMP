@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
-import { validateManifest, validateManifestObject } from './index';
-import schema from '../spec/schema.json';
+import { validateManifest, validateManifestObject, SCHEMAS, CURRENT_SPEC_VERSION } from './index';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,8 +24,16 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Get spec schema
+// Get spec schema: current version by default, ?version=0.2 for older manifests
 app.get('/spec', (req: Request, res: Response) => {
+  const requested = req.query.version ? `agentmanifest-${String(req.query.version).replace(/^v/, '')}` : CURRENT_SPEC_VERSION;
+  const schema = SCHEMAS[requested];
+  if (!schema) {
+    return res.status(404).json({
+      error: 'Unknown spec version',
+      message: `No schema for ${requested}. Available: ${Object.keys(SCHEMAS).join(', ')}`,
+    });
+  }
   res.json(schema);
 });
 
@@ -49,7 +56,7 @@ app.get('/agents', (req: Request, res: Response) => {
         validate_manifest_object:
           'POST /validate with body: {"manifest": {...}} - Validates a manifest JSON object directly without fetching. Useful for inline checking before deploying.',
         get_schema:
-          'GET /spec - Returns the full AgentManifest JSON Schema. Use this for programmatic validation in your own tools.',
+          'GET /spec - Returns the AgentManifest v0.3 JSON Schema. GET /spec?version=0.2 returns the v0.2 schema. Each manifest is validated against the schema of the spec_version it declares.',
       },
       workflow_example:
         '1. Ensure your API serves a valid manifest at /.well-known/agent-manifest.json. 2. POST /validate with your API URL to run all checks. 3. Fix any failed checks reported in the response. 4. Once all checks pass, submit to the Registry: POST https://api.agent-manifest.com/listings/submit with {"url": "your-api-url"}. 5. Your API is now discoverable by every AI agent using AMP.',

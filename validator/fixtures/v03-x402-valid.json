@@ -1,0 +1,43 @@
+{
+  "spec_version": "agentmanifest-0.3",
+  "name": "Pay Per Call Extractor",
+  "version": "1.0.0",
+  "description": "A pay-per-call web extraction API settled through x402. An unpaid request returns HTTP 402 with the exact price and pay-to address; the agent pays and retries with proof of payment. No signup and no API key.",
+  "categories": ["computing"],
+  "primary_category": "computational",
+  "endpoints": [
+    {
+      "path": "/api/v1/extract",
+      "method": "GET",
+      "description": "Extract clean text and markdown from any web page URL.",
+      "parameters": [
+        { "name": "url", "type": "string", "required": true, "description": "The page to extract." }
+      ],
+      "response_description": "JSON with title, text content, markdown, and page metadata."
+    }
+  ],
+  "authentication": { "required": false, "type": "none" },
+  "pricing": {
+    "model": "usage_based",
+    "free_tier": { "queries_per_day": 5 },
+    "paid_tier": {
+      "amount": "0.0001",
+      "currency": "x-XNO",
+      "unit": "request",
+      "description": "0.0001 XNO per request"
+    }
+  },
+  "payment": {
+    "model": "per_request",
+    "currency": "x-XNO",
+    "protocol": "x402",
+    "networks": ["nano:mainnet"],
+    "discovery_url": "https://example.com/.well-known/x402",
+    "rates": [{ "unit": "request", "price": "0.0001", "description": "Standard endpoints" }],
+    "settlement": { "type": "real_time", "provider_name": "Nano (XNO)", "provider_url": "https://nano.org" }
+  },
+  "agent_notes": "No account and no api key or other authentication is needed. Pricing: 5 free calls per day, then each call costs 0.0001 XNO. An unpaid call returns HTTP 402 with the amount and pay-to account; settle the payment and retry with the X-PAYMENT header. Check the payment requirements before each call to stay within budget.",
+  "contact": "ops@example.com",
+  "listing_requested": true,
+  "last_updated": "2026-09-01T00:00:00Z"
+}

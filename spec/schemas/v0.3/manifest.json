@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agent-manifest.com/schemas/v0.3/manifest.json",
-  "title": "Agent Manifest",
-  "description": "Schema for AgentManifest v0.2 and v0.3 specification",
+  "title": "Agent Manifest v0.3",
+  "description": "Schema for manifests that declare spec_version agentmanifest-0.3 (specification revision 0.3.1). Manifests declaring agentmanifest-0.2 are validated against https://agent-manifest.com/schemas/v0.2/manifest.json.",
   "type": "object",
   "required": [
     "spec_version",
@@ -21,7 +21,7 @@
   "properties": {
     "spec_version": {
       "type": "string",
-      "enum": ["agentmanifest-0.2", "agentmanifest-0.3"],
+      "enum": ["agentmanifest-0.3"],
       "description": "Version of the AgentManifest specification"
     },
     "name": {
@@ -161,7 +161,7 @@
                 "description": "Pricing notes for this endpoint"
               }
             },
-            "description": "v0.3: Per-endpoint cost metadata"
+            "description": "Per-endpoint cost metadata"
           }
         }
       },
@@ -173,8 +173,17 @@
       "properties": {
         "model": {
           "type": "string",
-          "enum": ["free", "per-query", "subscription", "pay-what-you-want", "tiered", "usage_based"],
-          "description": "Pricing model"
+          "enum": [
+            "free",
+            "freemium",
+            "per-query",
+            "subscription",
+            "pay-what-you-want",
+            "tiered",
+            "usage_based",
+            "unknown"
+          ],
+          "description": "Pricing model. 'freemium' and 'unknown' were added in revision 0.3.1; 'unknown' is intended for registry entries generated from public documentation that does not state pricing."
         },
         "free_tier": {
           "type": ["object", "null"],
@@ -186,13 +195,26 @@
         },
         "paid_tier": {
           "type": ["object", "null"],
-          "required": ["amount_usd", "unit", "description"],
+          "required": ["unit", "description"],
+          "anyOf": [
+            { "required": ["amount_usd"] },
+            { "required": ["amount", "currency"] }
+          ],
           "properties": {
             "amount_usd": { "type": "number", "minimum": 0 },
+            "amount": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "description": "Price as a decimal string in the declared currency (revision 0.3.1)"
+            },
+            "currency": {
+              "type": "string",
+              "description": "ISO 4217 code or x- prefixed unit identifier for amount (revision 0.3.1)"
+            },
             "unit": { "type": "string" },
             "description": { "type": "string" }
           },
-          "description": "Paid tier details"
+          "description": "Paid tier details. Declare amount_usd, or amount with currency for prices that are not in USD."
         },
         "support_url": {
           "type": ["string", "null"],
@@ -217,6 +239,22 @@
             "currency": {
               "type": "string",
               "description": "ISO 4217 code or x- prefixed unit identifier"
+            },
+            "protocol": {
+              "type": "string",
+              "enum": ["x402"],
+              "description": "Payment protocol spoken by the API's endpoints (revision 0.3.1). With 'x402', an unpaid request to a paid endpoint returns HTTP 402 with payment requirements, and onboarding becomes optional."
+            },
+            "networks": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Settlement networks accepted by the protocol, preferably as CAIP-2 identifiers (for example 'nano:mainnet', 'eip155:8453'). Required when protocol is set."
+            },
+            "discovery_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL of the protocol's discovery document, for example https://api.example.com/.well-known/x402"
             },
             "rates": {
               "type": "array",
@@ -324,7 +362,9 @@
               }
             }
           },
-          "description": "v0.3: Machine-executable payment contract"
+          "if": { "required": ["protocol"] },
+          "then": { "required": ["networks"] },
+          "description": "Machine-executable payment contract"
         }
       ]
     },
@@ -366,8 +406,8 @@
     },
     "agent_notes": {
       "type": "string",
-      "minLength": 50,
-      "description": "Freeform guidance for AI agents"
+      "minLength": 150,
+      "description": "Operational guidance for AI agents"
     },
     "contact": {
       "description": "Contact email, URL, or object",
@@ -398,10 +438,10 @@
     {
       "if": {
         "properties": {
-          "spec_version": { "const": "agentmanifest-0.3" },
           "payment": {
             "type": "object",
-            "properties": { "model": { "not": { "const": "free" } } }
+            "properties": { "model": { "not": { "const": "free" } } },
+            "not": { "required": ["protocol"] }
           }
         },
         "required": ["payment"]
@@ -417,7 +457,6 @@
     {
       "if": {
         "properties": {
-          "spec_version": { "const": "agentmanifest-0.3" },
           "payment": {
             "type": "object",
             "properties": {
@@ -442,18 +481,6 @@
               }
             }
           }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "spec_version": { "const": "agentmanifest-0.3" }
-        }
-      },
-      "then": {
-        "properties": {
-          "agent_notes": { "minLength": 150 }
         }
       }
     }

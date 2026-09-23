@@ -1,9 +1,23 @@
 {
   "name": "@agentmanifest/validator",
-  "version": "0.1.3",
-  "description": "Validator for AgentManifest specification",
+  "version": "0.3.0",
+  "description": "Validator library for Agent Manifest Protocol (AMP) v0.2 and v0.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./schemas/v0.2": "./schemas/v0.2/manifest.json",
+    "./schemas/v0.3": "./schemas/v0.3/manifest.json",
+    "./schemas/registry-record": "./schemas/registry-record.json"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
   "bin": {
     "agentmanifest": "dist/cli.js"
   },
@@ -13,28 +27,35 @@
     "cli": "tsx src/cli.ts",
     "start": "node dist/web.js",
     "start:web": "node dist/web.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "agentmanifest",
     "validator",
-    "api-validation"
+    "api-validation",
+    "amp"
   ],
-  "author": "",
+  "author": "Brandon Weber <brandon@agent-manifest.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AMProtocol/AMP.git",
+    "directory": "validator"
+  },
   "dependencies": {
     "ajv": "^8.12.0",
     "ajv-formats": "^2.1.1",
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2",
-    "node-fetch": "^3.3.2"
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vitest": "^4.0.18"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

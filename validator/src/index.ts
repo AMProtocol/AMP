@@ -1,12 +1,34 @@
-import Ajv from 'ajv';
+import Ajv, { ValidateFunction } from 'ajv';
 import addFormats from 'ajv-formats';
-import jwt from 'jsonwebtoken';
-import schema from '../spec/schema.json';
+import { requireJwtSecret, signJwt } from './jwt';
+import schemaV02 from '../schemas/v0.2/manifest.json';
+import schemaV03 from '../schemas/v0.3/manifest.json';
 import { validateAuthAndPayment } from './validateAuthAndPayment';
 import { checkAgentOperationalCompleteness } from './checkAgentCompleteness';
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 addFormats(ajv);
+
+export const CURRENT_SPEC_VERSION = 'agentmanifest-0.3';
+
+/** JSON Schema for each supported spec_version. */
+export const SCHEMAS: Record<string, object> = {
+  'agentmanifest-0.2': schemaV02,
+  'agentmanifest-0.3': schemaV03,
+};
+
+const schemaValidators: Record<string, ValidateFunction> = Object.fromEntries(
+  Object.entries(SCHEMAS).map(([version, schema]) => [version, ajv.compile(schema)])
+);
+
+/**
+ * Where the manifest for a URL lives: the origin root, per RFC 8615. A path in
+ * the submitted URL does not change the manifest location.
+ */
+export function resolveManifestUrl(url: string): string {
+  const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+  return new URL('/.well-known/agent-manifest.json', withScheme).toString();
+}
 
 export interface ValidationCheck {
   name: string;
@@ -17,6 +39,8 @@ export interface ValidationCheck {
 
 export interface ValidationResult {
   url: string;
+  /** Resolved origin-level manifest location, or null for manifests validated without a URL */
+  manifest_url: string | null;
   validated_at: string;
   passed: boolean;
   spec_version: string | null;
@@ -66,6 +90,9 @@ interface ManifestData {
     // v0.3 fields
     model?: string;
     currency?: string;
+    protocol?: string;
+    networks?: string[];
+    discovery_url?: string;
     rates?: Array<{
       unit: string;
       price: string;
@@ -198,10 +225,8 @@ async function fetchWithTimeout(
 }
 
 async function checkManifestReachability(
-  baseUrl: string
+  manifestUrl: string
 ): Promise<{ check: ValidationCheck; manifest: ManifestData | null }> {
-  const manifestUrl = new URL('/.well-known/agent-manifest.json', baseUrl).toString();
-
   try {
     const response = await fetchWithTimeout(manifestUrl);
 
@@ -254,9 +279,15 @@ async function checkManifestReachability(
   }
 }
 
+/** Validates against the schema of the declared spec_version (current version if unrecognized). */
 function checkSchemaValidity(manifest: ManifestData): ValidationCheck {
-  const validate = ajv.compile(schema);
+  const version =
+    manifest.spec_version && schemaValidators[manifest.spec_version]
+      ? manifest.spec_version
+      : CURRENT_SPEC_VERSION;
+  const validate = schemaValidators[version];
   const valid = validate(manifest);
+  const label = version.replace('agentmanifest-', 'v');
 
   if (!valid) {
     const errors = validate.errors
@@ -265,7 +296,7 @@ function checkSchemaValidity(manifest: ManifestData): ValidationCheck {
     return {
       name: 'schema_validity',
       passed: false,
-      message: `Schema validation failed: ${errors}`,
+      message: `Schema validation failed: ${errors} (checked against the ${label} schema)`,
       severity: 'error',
     };
   }
@@ -273,7 +304,7 @@ function checkSchemaValidity(manifest: ManifestData): ValidationCheck {
   return {
     name: 'schema_validity',
     passed: true,
-    message: 'Manifest passes JSON Schema validation',
+    message: `Manifest passes JSON Schema validation (${label} schema)`,
     severity: 'info',
   };
 }
@@ -749,8 +780,39 @@ function checkV03PaymentConsistency(manifest: ManifestData): ValidationCheck[] {
     }
   }
 
-  // Check 17–19: onboarding (required when model is not free)
-  if (payment.model !== 'free') {
+  // Revision 0.3.1: payment.protocol (x402) makes onboarding optional
+  if (payment.protocol) {
+    if (!payment.networks || payment.networks.length === 0) {
+      checks.push({
+        name: 'payment_protocol_networks',
+        passed: false,
+        message: `payment.networks must list at least one network when payment.protocol is "${payment.protocol}"`,
+        severity: 'error',
+      });
+    } else {
+      checks.push({
+        name: 'payment_protocol_networks',
+        passed: true,
+        message: `${payment.protocol} on ${payment.networks.join(', ')}`,
+        severity: 'info',
+      });
+    }
+    if (payment.discovery_url) {
+      try {
+        new URL(payment.discovery_url);
+      } catch {
+        checks.push({
+          name: 'payment_discovery_url',
+          passed: false,
+          message: 'payment.discovery_url is not a valid URL',
+          severity: 'error',
+        });
+      }
+    }
+  }
+
+  // Check 17–19: onboarding (required when model is not free, unless a payment protocol is declared)
+  if (payment.model !== 'free' && (payment.onboarding || !payment.protocol)) {
     if (!payment.onboarding) {
       checks.push({
         name: 'payment_onboarding',
@@ -943,22 +1005,20 @@ function computeDerivedFields(
   return { schema_valid, endpoints_reachable, badges };
 }
 
-function generateVerificationToken(
+async function generateVerificationToken(
   url: string,
   validatedAt: string,
   specVersion: string
-): string {
-  const secret = process.env.JWT_SECRET || 'agentmanifest-default-secret-change-in-production';
-
-  return jwt.sign(
+): Promise<string> {
+  const secret = requireJwtSecret();
+  return signJwt(
     {
       url,
       validated_at: validatedAt,
       spec_version: specVersion,
       iss: 'agentmanifest-validator',
     },
-    secret,
-    { expiresIn: '90d' }
+    secret
   );
 }
 
@@ -967,7 +1027,11 @@ function getBaseUrlForValidation(sourceUrl: string): string | null {
     typeof sourceUrl === 'string' &&
     (sourceUrl.startsWith('http://') || sourceUrl.startsWith('https://'))
   ) {
-    return sourceUrl.replace(/\/$/, '');
+    try {
+      return new URL(sourceUrl).origin;
+    } catch {
+      return null;
+    }
   }
   return null;
 }
@@ -976,6 +1040,7 @@ export async function validateManifestObject(manifest: ManifestData, sourceUrl: 
   const validatedAt = new Date().toISOString();
   const checks: ValidationCheck[] = [];
   const baseUrl = getBaseUrlForValidation(sourceUrl);
+  const manifestUrl = baseUrl ? resolveManifestUrl(baseUrl) : null;
 
   // Skip reachability check for local validation
   checks.push({
@@ -1034,7 +1099,7 @@ export async function validateManifestObject(manifest: ManifestData, sourceUrl: 
 
   // Generate verification token if passed
   const verificationToken = passed
-    ? generateVerificationToken(
+    ? await generateVerificationToken(
         sourceUrl,
         validatedAt,
         manifest.spec_version || 'unknown'
@@ -1054,6 +1119,7 @@ export async function validateManifestObject(manifest: ManifestData, sourceUrl: 
 
   return {
     url: sourceUrl,
+    manifest_url: manifestUrl,
     validated_at: validatedAt,
     passed,
     spec_version: manifest.spec_version || null,
@@ -1072,21 +1138,46 @@ export async function validateManifest(url: string): Promise<ValidationResult> {
   const validatedAt = new Date().toISOString();
   const checks: ValidationCheck[] = [];
 
-  // Normalize URL
-  let baseUrl = url;
-  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-    baseUrl = `https://${baseUrl}`;
+  // Normalize URL; result.url keeps the submitted path, checks run against the origin
+  let submittedUrl = url.trim();
+  if (!submittedUrl.startsWith('http://') && !submittedUrl.startsWith('https://')) {
+    submittedUrl = `https://${submittedUrl}`;
   }
-  baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+  submittedUrl = submittedUrl.replace(/\/$/, '');
+
+  let baseUrl: string;
+  let manifestUrl: string;
+  try {
+    baseUrl = new URL(submittedUrl).origin;
+    manifestUrl = resolveManifestUrl(baseUrl);
+  } catch {
+    return {
+      url: submittedUrl,
+      manifest_url: null,
+      validated_at: validatedAt,
+      passed: false,
+      spec_version: null,
+      checks: [
+        {
+          name: 'manifest_reachability',
+          passed: false,
+          message: `Invalid URL: ${url}`,
+          severity: 'error',
+        },
+      ],
+      verification_token: null,
+    };
+  }
 
   // 1. Manifest reachability
   const { check: reachabilityCheck, manifest } =
-    await checkManifestReachability(baseUrl);
+    await checkManifestReachability(manifestUrl);
   checks.push(reachabilityCheck);
 
   if (!manifest) {
     return {
-      url: baseUrl,
+      url: submittedUrl,
+      manifest_url: manifestUrl,
       validated_at: validatedAt,
       passed: false,
       spec_version: null,
@@ -1139,8 +1230,8 @@ export async function validateManifest(url: string): Promise<ValidationResult> {
 
   // Generate verification token if passed
   const verificationToken = passed
-    ? generateVerificationToken(
-        baseUrl,
+    ? await generateVerificationToken(
+        submittedUrl,
         validatedAt,
         manifest.spec_version || 'unknown'
       )
@@ -1158,7 +1249,8 @@ export async function validateManifest(url: string): Promise<ValidationResult> {
   );
 
   return {
-    url: baseUrl,
+    url: submittedUrl,
+    manifest_url: manifestUrl,
     validated_at: validatedAt,
     passed,
     spec_version: manifest.spec_version || null,

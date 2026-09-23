@@ -1,0 +1,38 @@
+{
+  "spec_version": "agentmanifest-0.2",
+  "name": "Test Keyed API",
+  "version": "1.0.0",
+  "description": "A v0.2 test API that issues free API keys through a v0.2 payment block. It mirrors how BakeBase declares key provisioning and exists to prove v0.2 payment blocks validate against the v0.2 schema.",
+  "categories": ["food-science", "chemistry"],
+  "primary_category": "reference",
+  "endpoints": [
+    {
+      "path": "/ingredients",
+      "method": "GET",
+      "description": "List ingredients with their functional properties for baking.",
+      "parameters": [],
+      "response_description": "Returns a JSON array of ingredients with names and functional roles."
+    }
+  ],
+  "pricing": {
+    "model": "free",
+    "free_tier": { "queries_per_day": 10000, "queries_per_month": null },
+    "paid_tier": null,
+    "support_url": "https://example.com/support"
+  },
+  "payment": {
+    "prepay_required": false,
+    "checkout_url": "https://example.com/dashboard/keys",
+    "key_provisioning_url": "https://example.com/dashboard/keys"
+  },
+  "authentication": {
+    "required": true,
+    "type": "api_key",
+    "instructions": "No account required. POST to /dashboard/keys to generate a key, then send it as X-API-Key."
+  },
+  "reliability": { "maintained_by": "individual", "status_url": null, "expected_uptime_pct": 99 },
+  "agent_notes": "No account required. Get an api key from /dashboard/keys and send it in the X-API-Key header for authentication. Pricing is free up to 10,000 queries per day.",
+  "contact": "mailto:test@example.com",
+  "listing_requested": true,
+  "last_updated": "2026-02-15T18:00:00Z"
+}

@@ -26,6 +26,9 @@ export interface ManifestForAuthPayment {
     // v0.3 fields
     model?: string;
     currency?: string;
+    protocol?: string;
+    networks?: string[];
+    discovery_url?: string;
     rates?: Array<{ unit: string; price: string }>;
     onboarding?: {
       url: string;
@@ -524,9 +527,144 @@ async function verifyPaymentFlow(
   return { payment_flow_verified, checks };
 }
 
+function isOnboardingAnswer(status: number): boolean {
+  return (status >= 200 && status < 300) || status === 401 || status === 402;
+}
+
+function allowHeaderIncludes(res: Response, method: string): boolean {
+  const allow = res.headers?.get?.('allow');
+  if (!allow) return false;
+  return allow
+    .split(',')
+    .map((m) => m.trim().toUpperCase())
+    .includes(method.toUpperCase());
+}
+
+/**
+ * An onboarding endpoint counts as answering when HEAD or GET returns 2xx, 401,
+ * or 402, or returns 405 with an Allow header that lists the declared method.
+ * Only HEAD and GET are sent, so nothing is created on the provider's side.
+ */
+async function probeOnboarding(
+  url: string,
+  method: string
+): Promise<{ ok: boolean; detail: string }> {
+  let last = '';
+  for (const probe of ['HEAD', 'GET']) {
+    const res = await fetchWithTimeout(url, { method: probe });
+    if (isOnboardingAnswer(res.status)) {
+      return { ok: true, detail: `${probe} returned ${res.status}` };
+    }
+    if (res.status === 405 && allowHeaderIncludes(res, method)) {
+      return { ok: true, detail: `${probe} returned 405 with Allow: ${res.headers.get('allow')}` };
+    }
+    last = `${probe} returned ${res.status}`;
+    if (res.status !== 405) break;
+  }
+  return { ok: false, detail: last };
+}
+
+interface X402Requirement {
+  amount?: string | number;
+  maxAmountRequired?: string | number;
+  payTo?: string;
+}
+
+function hasPricedRequirement(accepts: unknown): boolean {
+  return (
+    Array.isArray(accepts) &&
+    accepts.some((a: X402Requirement) => a && (a.amount ?? a.maxAmountRequired) !== undefined && !!a.payTo)
+  );
+}
+
+/**
+ * x402 APIs are payment-ready when their discovery document lists priced
+ * resources, or when an unpaid GET to a paid endpoint returns 402 with payment
+ * requirements. Neither costs anything.
+ */
+async function verifyX402PaymentFlow(
+  manifest: ManifestForAuthPayment,
+  baseUrl: string | null
+): Promise<{ payment_flow_verified: boolean; checks: ValidationCheck[] }> {
+  const checks: ValidationCheck[] = [];
+  const payment = manifest.payment!;
+
+  if (!baseUrl) {
+    checks.push({
+      name: 'x402_payment_requirements',
+      passed: false,
+      message: 'Cannot verify x402 payment requirements without base URL',
+      severity: 'info',
+    });
+    return { payment_flow_verified: false, checks };
+  }
+
+  const discoveryUrl = payment.discovery_url || new URL('/.well-known/x402', baseUrl).toString();
+  try {
+    const res = await fetchWithTimeout(discoveryUrl, { method: 'GET' });
+    if (res.status === 200) {
+      const doc = (await res.json()) as { resources?: Array<{ accepts?: unknown }> };
+      const priced = (doc.resources ?? []).filter((r) => hasPricedRequirement(r?.accepts));
+      if (priced.length > 0) {
+        checks.push({
+          name: 'x402_payment_requirements',
+          passed: true,
+          message: `x402 discovery document lists ${priced.length} priced resource(s)`,
+          severity: 'info',
+        });
+        return { payment_flow_verified: true, checks };
+      }
+    }
+  } catch {
+    /* fall through to probing endpoints */
+  }
+
+  let sawFreeTier = false;
+  const probes = (manifest.endpoints ?? []).filter((ep) => ep.method === 'GET' && ep.path).slice(0, 2);
+  for (const ep of probes) {
+    try {
+      const res = await fetchWithTimeout(new URL(ep.path, baseUrl).toString(), { method: 'GET' });
+      if (res.status === 402) {
+        let described = !!(res.headers?.get?.('payment-required') || res.headers?.get?.('x-payment-required'));
+        if (!described) {
+          try {
+            const body = (await res.json()) as { x402Version?: unknown; accepts?: unknown };
+            described = body.x402Version !== undefined || hasPricedRequirement(body.accepts);
+          } catch {
+            /* not JSON */
+          }
+        }
+        if (described) {
+          checks.push({
+            name: 'x402_payment_requirements',
+            passed: true,
+            message: `Unpaid GET ${ep.path} returned 402 with payment requirements`,
+            severity: 'info',
+          });
+          return { payment_flow_verified: true, checks };
+        }
+      } else if (res.status >= 200 && res.status < 300) {
+        sawFreeTier = true;
+      }
+    } catch {
+      /* try next endpoint */
+    }
+  }
+
+  checks.push({
+    name: 'x402_payment_requirements',
+    passed: false,
+    message: sawFreeTier
+      ? 'Unpaid requests succeeded (free tier); x402 payment requirements not observed this run'
+      : 'No x402 discovery document with prices and no 402 with payment requirements from paid endpoints',
+    severity: sawFreeTier ? 'info' : 'warning',
+  });
+  return { payment_flow_verified: false, checks };
+}
+
 /**
  * v0.3 payment flow verification.
- * Verifies that the onboarding and usage endpoints are reachable.
+ * Verifies that the onboarding and usage endpoints answer.
  * Does NOT send real credentials or process payments.
  */
 async function verifyV03PaymentFlow(
@@ -538,6 +676,12 @@ async function verifyV03PaymentFlow(
 
   if (!payment?.model || payment.model === 'free') {
     return { payment_flow_verified: false, checks };
+  }
+
+  if (payment.protocol === 'x402') {
+    const x402 = await verifyX402PaymentFlow(manifest, baseUrl);
+    if (x402.payment_flow_verified || !payment.onboarding?.url) return x402;
+    checks.push(...x402.checks);
   }
 
   if (!payment.onboarding?.url) {
@@ -562,31 +706,23 @@ async function verifyV03PaymentFlow(
 
   let onboardingOk = false;
 
-  // Check onboarding URL reachability (HEAD then GET)
   try {
-    const headRes = await fetchWithTimeout(payment.onboarding.url, { method: 'HEAD' });
-    if (headRes.status === 405) {
-      // Try GET if HEAD not supported
-      const getRes = await fetchWithTimeout(payment.onboarding.url, { method: 'GET' });
-      onboardingOk = getRes.status < 500;
-    } else {
-      onboardingOk = headRes.status < 500;
-    }
+    const probe = await probeOnboarding(payment.onboarding.url, payment.onboarding.method || 'POST');
+    onboardingOk = probe.ok;
+    checks.push({
+      name: 'v03_payment_onboarding_reachable',
+      passed: probe.ok,
+      message: probe.ok
+        ? `Payment onboarding endpoint answers (${probe.detail})`
+        : `Payment onboarding endpoint does not answer as an onboarding endpoint (${probe.detail}); expected 2xx, 401, 402, or 405 with Allow: ${payment.onboarding.method || 'POST'}`,
+      severity: probe.ok ? 'info' : 'warning',
+    });
   } catch (error) {
     checks.push({
       name: 'v03_payment_onboarding_reachable',
       passed: false,
       message: `Onboarding endpoint unreachable: ${(error as Error).message}`,
       severity: 'warning',
-    });
-  }
-
-  if (onboardingOk) {
-    checks.push({
-      name: 'v03_payment_onboarding_reachable',
-      passed: true,
-      message: 'Payment onboarding endpoint is reachable',
-      severity: 'info',
     });
   }
 
