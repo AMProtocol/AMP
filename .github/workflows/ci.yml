@@ -18,6 +18,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
+      - run: npm run check-schemas
       - run: npm run prisma:generate --workspace=registry
       - run: npm run build
       - run: npm test

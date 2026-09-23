@@ -106,7 +106,7 @@ Every compliant API must serve this at `/.well-known/agent-manifest.json`:
 }
 ```
 
-See [spec/v0.2.md](spec/v0.2.md) for complete field documentation.
+See [spec/v0.3.md](spec/v0.3.md) for complete field documentation.
 
 ---
 

@@ -70,14 +70,14 @@ This is a monorepo with npm workspaces:
 /registry      ← Public registry API + database
 ```
 
-The `spec/` directory at the root is the canonical source for the specification and JSON schema. The copies in `validator/spec/` and `registry/spec/` exist for build-time bundling — if you're changing the spec, edit the root copy and we'll sync the others.
+The `spec/` directory at the root is the canonical source for the specification and its JSON Schemas. `validator/schemas/` is a generated copy used for build-time bundling: edit `spec/`, then run `npm run sync-schemas`. CI fails if the copy is out of date.
 
 ## Pull Request Guidelines
 
 1. **One concern per PR.** Don't mix a spec change with a code refactor.
 2. **Describe the "why."** The PR description should explain what problem you're solving, not just what you changed.
 3. **Test your changes.** Run the validator against a compliant API (`npm run cli -- validate https://bakebase.agent-manifest.com`) and verify the registry endpoints still work.
-4. **Keep the spec stable.** Changes to `spec/v0.2.md`, `spec/v0.1.md`, or `spec/schema.json` have downstream effects on every existing manifest. We take spec changes seriously — open an issue to discuss before submitting a PR.
+4. **Keep the spec stable.** Changes to `spec/v0.3.md`, `spec/v0.2.md`, or `spec/schemas/` have downstream effects on every existing manifest. We take spec changes seriously — open an issue to discuss before submitting a PR.
 
 ## Proposing Spec Changes
 
@@ -86,7 +86,7 @@ The spec is versioned and changes go through discussion before merging:
 1. Open an issue with the `spec` label
 2. Describe: what you'd add/change, why it matters, and whether it's backwards-compatible
 3. The community discusses
-4. If accepted, submit a PR against `spec/v0.2.md` and `spec/schema.json`
+4. If accepted, submit a PR against `spec/v0.3.md` and the matching schema in `spec/schemas/`
 
 Backwards-compatible additions (new optional fields, new categories) have a much lower bar than breaking changes.
 
