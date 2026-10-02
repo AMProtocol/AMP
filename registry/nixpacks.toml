@@ -1,9 +1,10 @@
-# Updated config - registry service
+# Railway builds from registry/ but the full repo is cloned (parent has npm workspaces).
+# Use npm ci --no-workspaces + package-lock.json to avoid npm edgesOut failures.
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm ci --no-workspaces"]
 
 [phases.build]
 cmds = [
@@ -12,4 +13,4 @@ cmds = [
 ]
 
 [start]
-cmd = "npm run prisma:push && npm start"
+cmd = "npm run start"

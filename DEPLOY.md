@@ -8,8 +8,10 @@ Push to `main` and Railway deploys both services.
 
 | Service   | Build                          | Start                                      |
 |-----------|--------------------------------|--------------------------------------------|
-| Validator | `npm install` → `npm run build` | `npm run start:web`                         |
-| Registry  | `npm install` → `prisma generate` → `npm run build` | `prisma db push` → `node dist/index.js` |
+| Validator | `npm ci --no-workspaces` → `npm run build` | `npm run start:web`                         |
+| Registry  | `npm ci --no-workspaces` → `prisma generate` → `npm run build` | `npm run start` (includes `prisma db push`) |
+
+Railway clones the full monorepo but builds from `registry/` or `validator/`. Use **`npm ci --no-workspaces`** and the per-service **`package-lock.json`** so npm does not walk the root workspace (avoids `edgesOut` install failures).
 
 ### Registry: No seed
 

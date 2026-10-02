@@ -1,9 +1,9 @@
-# Updated config - validator service
+# Railway builds from validator/; parent monorepo must not confuse npm install.
 [phases.setup]
-nixPkgs = ["nodejs-18_x"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm ci --no-workspaces"]
 
 [phases.build]
 cmds = ["npm run build"]
