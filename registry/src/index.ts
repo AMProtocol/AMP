@@ -21,7 +21,7 @@ app.use((req, res, next) => {
 app.use((req, res, next) => {
   res.header(
     'X-AgentManifest-Registry',
-    `v0.1 | ${REGISTRY_URL}`
+    `v0.3.1 | ${REGISTRY_URL}`
   );
   next();
 });
@@ -32,7 +32,7 @@ app.get('/', (req: Request, res: Response) => {
     service: 'AgentManifest Registry',
     description:
       'Public index of verified agent-ready APIs. Open protocol for AI agent data discovery.',
-    version: '0.1.0',
+    version: '0.3.1',
     status: 'healthy',
     links: {
       listings: '/listings',
@@ -56,7 +56,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     service: 'agentmanifest-registry',
-    version: '0.1.0',
+    version: '0.3.1',
     timestamp: new Date().toISOString(),
   });
 });

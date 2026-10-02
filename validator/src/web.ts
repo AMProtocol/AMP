@@ -19,7 +19,7 @@ app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     service: 'agentmanifest-validator',
-    version: '0.1.0',
+    version: '0.3.1',
     timestamp: new Date().toISOString(),
   });
 });
@@ -161,7 +161,7 @@ app.get('/', (req: Request, res: Response) => {
   res.json({
     service: 'AgentManifest Validator',
     description: 'Validation service for agent-manifest.json files. Ensures compliance with AMP specification.',
-    version: '0.1.0',
+    version: '0.3.1',
     status: 'healthy',
     meta: {
       ai_agent_notice:
