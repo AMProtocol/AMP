@@ -2,16 +2,26 @@
  * HS256 JWT signing via Web Crypto (Node 18+ and Cloudflare Workers).
  */
 
+import { webcrypto } from 'node:crypto';
+
+function subtle(): SubtleCrypto {
+  return (globalThis.crypto?.subtle ?? webcrypto.subtle) as SubtleCrypto;
+}
+
 function base64UrlEncode(data: Uint8Array | string): string {
   const bytes =
     typeof data === 'string' ? new TextEncoder().encode(data) : data;
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const encoded =
+    typeof btoa === 'function'
+      ? btoa(binary)
+      : Buffer.from(bytes).toString('base64');
+  return encoded.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function importHmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
+  return subtle().importKey(
     'raw',
     new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' },
@@ -32,7 +42,7 @@ export async function signJwt(
   const encodedPayload = base64UrlEncode(JSON.stringify(body));
   const signingInput = `${encodedHeader}.${encodedPayload}`;
   const key = await importHmacKey(secret);
-  const signature = await crypto.subtle.sign(
+  const signature = await subtle().sign(
     'HMAC',
     key,
     new TextEncoder().encode(signingInput)
