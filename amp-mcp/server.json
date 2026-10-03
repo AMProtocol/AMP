@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.agent-manifest/amp-mcp",
+  "title": "Agent Manifest Protocol (AMP)",
+  "description": "Discover API manifests at /.well-known/agent-manifest.json, validate against the official AMP JSON Schema, and check whether intended HTTP actions comply with declared endpoints, auth, payment, and agent_notes constraints.",
+  "version": "0.1.0",
+  "websiteUrl": "https://agent-manifest.com",
+  "repository": {
+    "url": "https://github.com/AMProtocol/AMP",
+    "source": "github",
+    "directory": "amp-mcp"
+  },
+  "remotes": [
+    {
+      "type": "sse",
+      "url": "https://mcp.agent-manifest.com/mcp"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@agent-manifest/mcp-server",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "AMP_FETCH_TIMEOUT_MS",
+          "description": "HTTP timeout (ms) when fetching manifests from API origins.",
+          "default": "15000"
+        }
+      ]
+    }
+  ]
+}

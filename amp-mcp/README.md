@@ -176,14 +176,19 @@ This repo includes [`smithery.yaml`](./smithery.yaml) for one-command Smithery i
 - `AMP_FETCH_TIMEOUT_MS`
 - `AMP_VALIDATOR_URL` (reserved for future remote validation helpers)
 
-## Anthropic MCP registry
+## Registries (Smithery, official MCP Registry, npm)
 
-1. Publish `@agent-manifest/mcp-server` to npm with public `bin` entries `amp-mcp` and `amp-mcp-http`.
-2. Open a registry submission with:
-   - Server name: `agent-manifest-protocol`
-   - Transport: stdio + documented SSE URL for hosted hub
-   - Link to this README and https://agent-manifest.com
-3. Ensure license `MIT` and repository URL match `package.json`.
+Step-by-step: **[REGISTRY.md](./REGISTRY.md)**.
+
+Quick path for the **official MCP Registry**:
+
+```bash
+cd amp-mcp
+mcp-publisher login    # DNS for com.agent-manifest/* on agent-manifest.com
+mcp-publisher publish  # uses server.json in this folder
+```
+
+Hosted SSE is already listed in `server.json` as `https://mcp.agent-manifest.com/mcp`.
 
 ## Development
 
