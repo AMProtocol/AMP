@@ -3,6 +3,7 @@ node_modules/
 package-lock.json
 !registry/package-lock.json
 !validator/package-lock.json
+!amp-mcp/package-lock.json
 
 # Build outputs
 dist/

@@ -22,3 +22,9 @@ jobs:
       - run: npm run prisma:generate --workspace=registry
       - run: npm run build
       - run: npm test
+      - name: amp-mcp (standalone package)
+        working-directory: amp-mcp
+        run: |
+          npm ci
+          npm run build
+          npm test
