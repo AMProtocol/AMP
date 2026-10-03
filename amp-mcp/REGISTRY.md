@@ -13,7 +13,7 @@ This is **not** a separate “Anthropic-only” registry. It is the **official M
 | Asset | URL / id |
 |--------|-----------|
 | Hosted SSE hub | `https://mcp.agent-manifest.com/mcp` (health: `/health`) |
-| npm stdio | `@agent-manifest/mcp-server` |
+| npm stdio | `@agentmanifest/mcp-server` |
 | Metadata file | [`server.json`](./server.json) |
 | Registry name | `com.agent-manifest/amp-mcp` |
 

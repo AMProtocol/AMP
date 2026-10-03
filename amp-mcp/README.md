@@ -103,7 +103,7 @@ cd agentmanifest && npm install && npm run build --workspace=amp-mcp
 ### Stdio (Cursor, Claude Desktop, CI)
 
 ```bash
-npx @agent-manifest/mcp-server
+npx @agentmanifest/mcp-server
 # or after linking locally:
 node dist/index.js
 ```
@@ -154,7 +154,7 @@ After publishing to npm, replace with:
   "mcpServers": {
     "agent-manifest-protocol": {
       "command": "npx",
-      "args": ["-y", "@agent-manifest/mcp-server"]
+      "args": ["-y", "@agentmanifest/mcp-server"]
     }
   }
 }
@@ -167,7 +167,7 @@ After publishing to npm, replace with:
 - Command: `node`
 - Args: `/path/to/amp-mcp/dist/index.js`
 
-Or use `npx -y @agent-manifest/mcp-server` once published.
+Or use `npx -y @agentmanifest/mcp-server` once published.
 
 ## Smithery
 

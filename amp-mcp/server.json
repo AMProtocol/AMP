@@ -3,7 +3,7 @@
   "name": "com.agent-manifest/amp-mcp",
   "title": "Agent Manifest Protocol (AMP)",
   "description": "Fetch, validate, and permission-check Agent Manifest Protocol (AMP) manifests for API discovery.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://agent-manifest.com",
   "repository": {
     "url": "https://github.com/AMProtocol/AMP",
@@ -20,8 +20,8 @@
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
-      "identifier": "@agent-manifest/mcp-server",
-      "version": "0.1.1",
+      "identifier": "@agentmanifest/mcp-server",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },

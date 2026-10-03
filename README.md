@@ -42,8 +42,8 @@ A tool that checks APIs against the spec and issues verification tokens. Availab
 Official [Model Context Protocol](https://modelcontextprotocol.io) server for AMP — tools to fetch manifests, validate JSON Schema, and check actions against declared constraints. Stdio for Cursor/Claude; SSE HTTP for a hosted hub. See [`amp-mcp/README.md`](./amp-mcp/README.md).
 
 ```bash
-npx @agent-manifest/mcp-server          # stdio
-npx @agent-manifest/mcp-server-http     # SSE on PORT (default 8787)
+npx @agentmanifest/mcp-server          # stdio
+npx @agentmanifest/mcp-server-http     # SSE on PORT (default 8787)
 ```
 
 ### 3. **The Registry**
