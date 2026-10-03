@@ -17,14 +17,35 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm install
-      - run: npm run check-schemas
-      - run: npm run prisma:generate --workspace=registry
-      - run: npm run build
-      - run: npm test
-      - name: amp-mcp (standalone package)
+      # Root workspace install hits npm arborist edgesOut bugs; match Railway per-service installs.
+      - name: Install validator
+        working-directory: validator
+        run: npm ci --no-workspaces
+      - name: Install registry
+        working-directory: registry
+        run: npm ci --no-workspaces
+      - name: Install amp-mcp
         working-directory: amp-mcp
-        run: |
-          npm ci
-          npm run build
-          npm test
+        run: npm ci
+      - run: npm run check-schemas
+      - name: Prisma generate
+        working-directory: registry
+        run: npx prisma generate
+      - name: Build validator
+        working-directory: validator
+        run: npm run build
+      - name: Build registry
+        working-directory: registry
+        run: npm run build
+      - name: Build amp-mcp
+        working-directory: amp-mcp
+        run: npm run build
+      - name: Test validator
+        working-directory: validator
+        run: npm test
+      - name: Test registry
+        working-directory: registry
+        run: npm test
+      - name: Test amp-mcp
+        working-directory: amp-mcp
+        run: npm test
