@@ -103,7 +103,7 @@ cd agentmanifest && npm install && npm run build --workspace=amp-mcp
 ### Stdio (Cursor, Claude Desktop, CI)
 
 ```bash
-npx @agentmanifest/mcp-server
+npx -y @agentmanifest/mcp-server
 # or after linking locally:
 node dist/index.js
 ```

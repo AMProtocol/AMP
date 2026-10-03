@@ -1,14 +1,13 @@
 {
   "name": "@agentmanifest/mcp-server",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "mcpName": "com.agent-manifest/amp-mcp",
   "description": "Official MCP server for the Agent Manifest Protocol (AMP) — discover, validate, and check agent permissions against agent-manifest.json",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "amp-mcp": "./dist/index.js",
-    "amp-mcp-http": "./dist/http.js"
+    "mcp-server": "./dist/index.js"
   },
   "files": [
     "dist",
