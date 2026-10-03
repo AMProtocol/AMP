@@ -176,19 +176,19 @@ This repo includes [`smithery.yaml`](./smithery.yaml) for one-command Smithery i
 - `AMP_FETCH_TIMEOUT_MS`
 - `AMP_VALIDATOR_URL` (reserved for future remote validation helpers)
 
-## Registries (Smithery, official MCP Registry, npm)
+## Registries (official MCP Registry, Smithery, npm)
 
-Step-by-step: **[REGISTRY.md](./REGISTRY.md)**.
+Docs: **[REGISTRY.md](./REGISTRY.md)** and **[modelcontextprotocol.io/registry/about](https://modelcontextprotocol.io/registry/about)**.
 
-Quick path for the **official MCP Registry**:
+The MCP Registry holds **metadata** (`server.json`); npm holds the package; Railway holds the remote URL. Host apps often discover you via **aggregators** that sync the registry — not by scraping your site.
 
 ```bash
+brew install mcp-publisher   # see registry quickstart
 cd amp-mcp
-mcp-publisher login    # DNS for com.agent-manifest/* on agent-manifest.com
-mcp-publisher publish  # uses server.json in this folder
+# package.json mcpName must match server.json "name"
+mcp-publisher login github   # or DNS/HTTP for com.agent-manifest/*
+mcp-publisher publish
 ```
-
-Hosted SSE is already listed in `server.json` as `https://mcp.agent-manifest.com/mcp`.
 
 ## Development
 

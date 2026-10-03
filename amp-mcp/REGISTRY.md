@@ -1,120 +1,96 @@
-# Publishing AMP MCP to registries
+# Publishing AMP MCP (current MCP Registry docs)
 
-Your hosted hub: **https://mcp.agent-manifest.com** (`GET /health`, SSE at `GET /mcp`).
+Official docs start here: **[The MCP Registry — About](https://modelcontextprotocol.io/registry/about)**.
 
-npm package: **`@agent-manifest/mcp-server`** (`npx -y @agent-manifest/mcp-server`).
+This is **not** a separate “Anthropic-only” registry. It is the **official MCP Registry** (preview), backed by Anthropic, GitHub, PulseMCP, Microsoft, etc. It stores **`server.json` metadata** only — not your server binary (that stays on **npm** and/or your **HTTPS** host).
 
----
-
-## 1. Official MCP Registry (Anthropic / GitHub / Microsoft hub)
-
-**One publish → many clients** (Claude, aggregators, PulseMCP mirrors, etc.).
-
-1. Install the publisher CLI (see [Publishing guide](https://modelcontextprotocol.io/registry/publishing)).
-2. In this directory, metadata is in [`server.json`](./server.json):
-   - **Namespace:** `com.agent-manifest/amp-mcp` → prove **DNS** on `agent-manifest.com` (recommended for your domain).
-   - **Remote:** SSE `https://mcp.agent-manifest.com/mcp`
-   - **Package:** npm stdio `@agent-manifest/mcp-server`
-3. Authenticate (pick one):
-   - **DNS** — for `com.agent-manifest/*` (TXT record challenge from `mcp-publisher login`).
-   - **GitHub** — alternatively use `io.github.AMProtocol/amp-mcp` if you prefer OAuth as the org.
-4. Publish:
-
-   ```bash
-   cd amp-mcp
-   mcp-publisher login   # follow DNS or GitHub flow
-   mcp-publisher publish
-   ```
-
-5. Verify:
-
-   ```bash
-   curl "https://registry.modelcontextprotocol.io/v0/servers?search=agent-manifest&version=latest"
-   ```
-
-**After each npm bump:** update `version` in `server.json` (both top-level and `packages[].version`), republish.
-
-Optional: add GitHub Actions with `mcp-publisher` + OIDC — see [modelcontextprotocol/registry](https://github.com/modelcontextprotocol/registry) `docs/guides/publishing/github-actions.md`.
+**Important (from the about page):** most **host apps do not read the registry directly**. They use **downstream marketplaces/aggregators** that sync from the registry API. You publish once to the MCP Registry; Smithery/PulseMCP-style catalogs are separate unless they ingest the official feed.
 
 ---
 
-## 2. Smithery
+## What you already have
 
-Two listings are common (stdio + remote):
-
-### A. Stdio (from GitHub + `smithery.yaml`)
-
-1. [smithery.ai/new](https://smithery.ai/new) → connect **AMProtocol/AMP**, root **`amp-mcp/`**.
-2. Smithery reads [`smithery.yaml`](./smithery.yaml) (`startCommand.type: stdio`).
-
-### B. Remote URL (your Railway host)
-
-Smithery’s URL flow prefers **Streamable HTTP**. You currently expose **legacy SSE** at `/mcp`.
-
-- Try: [smithery.ai/new](https://smithery.ai/new) → URL `https://mcp.agent-manifest.com/mcp`
-- If the scanner rejects SSE, keep **A** for Smithery and rely on the **official MCP Registry** `remotes` entry for hosted SSE until you add Streamable HTTP alongside SSE.
-
-CLI (API key from Smithery dashboard):
-
-```bash
-npx @smithery/cli mcp publish "https://mcp.agent-manifest.com/mcp" -n agent-manifest/amp-mcp
-# or link GitHub repo per docs
-```
+| Asset | URL / id |
+|--------|-----------|
+| Hosted SSE hub | `https://mcp.agent-manifest.com/mcp` (health: `/health`) |
+| npm stdio | `@agent-manifest/mcp-server` |
+| Metadata file | [`server.json`](./server.json) |
+| Registry name | `com.agent-manifest/amp-mcp` |
 
 ---
 
-## 3. npm (already done)
+## Step-by-step (official quickstart)
 
-- Package: https://www.npmjs.com/package/@agent-manifest/mcp-server  
-- Bump version → `npm publish --access public` → update `server.json` → `mcp-publisher publish`.
+Follow: **[Quickstart: Publish an MCP Server](https://modelcontextprotocol.io/registry/quickstart)**
 
----
+### 1. `mcpName` must match `server.json` → `name`
 
-## 4. PulseMCP & other aggregators
-
-Most **ingest the official MCP Registry**. Publishing step **1** is usually enough; no separate PulseMCP form.
-
----
-
-## 5. Cursor / Claude Desktop (not registries)
-
-Users install manually or via registry-aware clients:
-
-**Cursor** — MCP settings → command:
+In `package.json`:
 
 ```json
-{
-  "mcpServers": {
-    "agent-manifest-protocol": {
-      "command": "npx",
-      "args": ["-y", "@agent-manifest/mcp-server"]
-    }
-  }
-}
+"mcpName": "com.agent-manifest/amp-mcp"
 ```
 
-**Remote SSE** — only if the client supports URL/SSE; point at `https://mcp.agent-manifest.com/mcp` (session POST to `/messages`).
+Must equal `server.json` → `"name": "com.agent-manifest/amp-mcp"`.
 
-**Claude Desktop** — same stdio block in `claude_desktop_config.json`, or use connectors that pull from the official registry after you publish.
+After adding `mcpName`, **bump npm version** and `npm publish` again (registry verifies the live npm package).
+
+### 2. Install `mcp-publisher` (binary, not npm)
+
+```bash
+brew install mcp-publisher
+# or see https://modelcontextprotocol.io/registry/quickstart
+```
+
+### 3. Create or refine `server.json`
+
+```bash
+cd amp-mcp
+mcp-publisher init   # optional; we already ship server.json
+```
+
+Schema: `https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json`
+
+Remote SSE entry is valid but **deprecated** for new clients — see [Publishing remote servers](https://modelcontextprotocol.io/registry/remote-servers). Prefer adding **streamable-http** later; keep `sse` for compatibility.
+
+### 4. Authenticate (namespace must match)
+
+See **[Authentication](https://modelcontextprotocol.io/registry/authentication)**.
+
+| Method | `server.json` name prefix | You |
+|--------|---------------------------|-----|
+| **GitHub** | `io.github.AMProtocol/...` | `mcp-publisher login github` as org member |
+| **DNS / HTTP** | `com.agent-manifest/...` | Prove `agent-manifest.com` (TXT or `/.well-known/mcp-registry-auth`) |
+
+We use **`com.agent-manifest/amp-mcp`** → use **DNS or HTTP** auth on **agent-manifest.com** (or switch name + `mcpName` to `io.github.AMProtocol/amp-mcp` and use GitHub login).
+
+### 5. Publish
+
+```bash
+mcp-publisher publish
+```
+
+Verify (API version from quickstart):
+
+```bash
+curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=agent-manifest"
+```
 
 ---
 
-## 6. Marketing on agent-manifest.com
+## Smithery (separate marketplace)
 
-Add to landing / `llms.txt`:
+Still valid as a **downstream** catalog: [smithery.ai/docs/build/publish](https://www.smithery.ai/docs/build/publish)
 
-- MCP hub: `https://mcp.agent-manifest.com/health`
-- Install: `npx @agent-manifest/mcp-server`
-- Registry name: `com.agent-manifest/amp-mcp` (after publish)
+- **Stdio:** connect GitHub `AMProtocol/AMP`, root `amp-mcp/`, `smithery.yaml`
+- **URL:** Smithery favors **Streamable HTTP**; your hub is **SSE** today — use GitHub/stdio path or add streamable-http on the same host later
 
 ---
 
 ## Checklist
 
-| Registry | Action |
-|----------|--------|
-| **registry.modelcontextprotocol.io** | `mcp-publisher publish` + DNS on `agent-manifest.com` |
-| **Smithery** | New project → GitHub `amp-mcp/` or URL publish |
-| **npm** | Keep `@agent-manifest/mcp-server` in sync with `server.json` |
-| **PulseMCP / others** | Usually automatic after official registry |
-| **Cursor / Claude** | Docs + registry entry; optional landing link |
+1. Add `mcpName` → republish npm  
+2. `mcp-publisher login` (github **or** dns/http for `com.agent-manifest`)  
+3. `mcp-publisher publish`  
+4. Smithery / other marketplaces (optional, separate sign-up)  
+5. Link from [agent-manifest.com](https://agent-manifest.com) to npm + `mcp.agent-manifest.com`
