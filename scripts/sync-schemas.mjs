@@ -16,6 +16,8 @@ const FILES = [
   ['spec/schemas/v0.2/manifest.json', 'validator/schemas/v0.2/manifest.json'],
   ['spec/schemas/v0.3/manifest.json', 'validator/schemas/v0.3/manifest.json'],
   ['spec/registry-record.schema.json', 'validator/schemas/registry-record.json'],
+  ['spec/schemas/v0.2/manifest.json', 'amp-mcp/schemas/v0.2/manifest.json'],
+  ['spec/schemas/v0.3/manifest.json', 'amp-mcp/schemas/v0.3/manifest.json'],
 ];
 
 async function readOrNull(path) {
@@ -40,7 +42,9 @@ for (const [from, to] of FILES) {
   }
 }
 
-const expected = new Set(FILES.map(([, to]) => to));
+const expected = new Set(
+  FILES.map(([, to]) => to).filter((p) => p.startsWith('validator/'))
+);
 async function walk(dir) {
   const out = [];
   for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {

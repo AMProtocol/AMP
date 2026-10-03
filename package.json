@@ -5,7 +5,8 @@
   "private": true,
   "workspaces": [
     "validator",
-    "registry"
+    "registry",
+    "amp-mcp"
   ],
   "scripts": {
     "dev:validator": "npm run dev --workspace=validator",

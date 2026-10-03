@@ -38,6 +38,14 @@ A tool that checks APIs against the spec and issues verification tokens. Availab
 - A CLI tool for local development
 - A web API for automated registry checks
 
+### 2b. **MCP Server** (`amp-mcp/`)
+Official [Model Context Protocol](https://modelcontextprotocol.io) server for AMP — tools to fetch manifests, validate JSON Schema, and check actions against declared constraints. Stdio for Cursor/Claude; SSE HTTP for a hosted hub. See [`amp-mcp/README.md`](./amp-mcp/README.md).
+
+```bash
+npx @agent-manifest/mcp-server          # stdio
+npx @agent-manifest/mcp-server-http     # SSE on PORT (default 8787)
+```
+
 ### 3. **The Registry**
 A public, queryable index of verified APIs that agents can use to discover data sources at runtime. Think of it as the npm registry, but for agent-accessible data APIs.
 

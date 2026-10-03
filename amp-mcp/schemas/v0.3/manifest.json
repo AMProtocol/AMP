@@ -1,0 +1,488 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-manifest.com/schemas/v0.3/manifest.json",
+  "title": "Agent Manifest v0.3",
+  "description": "Schema for manifests that declare spec_version agentmanifest-0.3 (specification revision 0.3.1). Manifests declaring agentmanifest-0.2 are validated against https://agent-manifest.com/schemas/v0.2/manifest.json.",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "name",
+    "version",
+    "description",
+    "categories",
+    "primary_category",
+    "endpoints",
+    "pricing",
+    "authentication",
+    "agent_notes",
+    "contact",
+    "last_updated"
+  ],
+  "properties": {
+    "spec_version": {
+      "type": "string",
+      "enum": ["agentmanifest-0.3"],
+      "description": "Version of the AgentManifest specification"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 100,
+      "description": "Human-readable name of the API"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Semantic version of the API"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 100,
+      "description": "Plain language explanation for AI agents"
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the API homepage"
+    },
+    "documentation": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to external documentation"
+    },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "food-science",
+          "materials",
+          "construction",
+          "music-gear",
+          "chemistry",
+          "biology",
+          "physics",
+          "mathematics",
+          "geography",
+          "finance",
+          "legal",
+          "medical",
+          "engineering",
+          "education",
+          "translation",
+          "media",
+          "agriculture",
+          "computing",
+          "language",
+          "history",
+          "commerce",
+          "identity",
+          "weather",
+          "logistics",
+          "other"
+        ]
+      },
+      "description": "Categories from controlled vocabulary"
+    },
+    "primary_category": {
+      "type": "string",
+      "enum": [
+        "reference",
+        "live",
+        "computational",
+        "transactional",
+        "enrichment",
+        "personal",
+        "discovery"
+      ],
+      "description": "Primary classification of the API"
+    },
+    "endpoints": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "method", "description", "parameters", "response_description"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^/",
+            "description": "API endpoint path"
+          },
+          "method": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"],
+            "description": "HTTP method"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 20,
+            "description": "When and why agents should use this endpoint"
+          },
+          "parameters": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "type", "required", "description"],
+              "properties": {
+                "name": { "type": "string" },
+                "type": { "type": "string" },
+                "required": { "type": "boolean" },
+                "description": { "type": "string" }
+              }
+            },
+            "description": "Array of parameter objects"
+          },
+          "response_description": {
+            "type": "string",
+            "minLength": 20,
+            "description": "Response content and interpretation guide"
+          },
+          "cost_hint": {
+            "type": "object",
+            "required": ["unit", "estimated_price", "currency"],
+            "properties": {
+              "unit": {
+                "type": "string",
+                "description": "Billing unit for this endpoint"
+              },
+              "estimated_price": {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$",
+                "description": "Estimated cost per unit as decimal string"
+              },
+              "currency": {
+                "type": "string",
+                "description": "ISO 4217 code or x- prefixed unit identifier"
+              },
+              "notes": {
+                "type": "string",
+                "description": "Pricing notes for this endpoint"
+              }
+            },
+            "description": "Per-endpoint cost metadata"
+          }
+        }
+      },
+      "description": "Available API endpoints"
+    },
+    "pricing": {
+      "type": "object",
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "type": "string",
+          "enum": [
+            "free",
+            "freemium",
+            "per-query",
+            "subscription",
+            "pay-what-you-want",
+            "tiered",
+            "usage_based",
+            "unknown"
+          ],
+          "description": "Pricing model. 'freemium' and 'unknown' were added in revision 0.3.1; 'unknown' is intended for registry entries generated from public documentation that does not state pricing."
+        },
+        "free_tier": {
+          "type": ["object", "null"],
+          "properties": {
+            "queries_per_day": { "type": ["number", "null"], "minimum": 0 },
+            "queries_per_month": { "type": ["number", "null"], "minimum": 0 }
+          },
+          "description": "Free usage limits"
+        },
+        "paid_tier": {
+          "type": ["object", "null"],
+          "required": ["unit", "description"],
+          "anyOf": [
+            { "required": ["amount_usd"] },
+            { "required": ["amount", "currency"] }
+          ],
+          "properties": {
+            "amount_usd": { "type": "number", "minimum": 0 },
+            "amount": {
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?$",
+              "description": "Price as a decimal string in the declared currency (revision 0.3.1)"
+            },
+            "currency": {
+              "type": "string",
+              "description": "ISO 4217 code or x- prefixed unit identifier for amount (revision 0.3.1)"
+            },
+            "unit": { "type": "string" },
+            "description": { "type": "string" }
+          },
+          "description": "Paid tier details. Declare amount_usd, or amount with currency for prices that are not in USD."
+        },
+        "support_url": {
+          "type": ["string", "null"],
+          "format": "uri",
+          "description": "URL for voluntary contributions or payment"
+        }
+      },
+      "description": "Informational pricing metadata"
+    },
+    "payment": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["model", "currency", "rates", "settlement"],
+          "properties": {
+            "model": {
+              "type": "string",
+              "enum": ["free", "per_request", "metered_usage", "prepaid_credits", "subscription"],
+              "description": "Payment model"
+            },
+            "currency": {
+              "type": "string",
+              "description": "ISO 4217 code or x- prefixed unit identifier"
+            },
+            "protocol": {
+              "type": "string",
+              "enum": ["x402"],
+              "description": "Payment protocol spoken by the API's endpoints (revision 0.3.1). With 'x402', an unpaid request to a paid endpoint returns HTTP 402 with payment requirements, and onboarding becomes optional."
+            },
+            "networks": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 },
+              "description": "Settlement networks accepted by the protocol, preferably as CAIP-2 identifiers (for example 'nano:mainnet', 'eip155:8453'). Required when protocol is set."
+            },
+            "discovery_url": {
+              "type": "string",
+              "format": "uri",
+              "description": "URL of the protocol's discovery document, for example https://api.example.com/.well-known/x402"
+            },
+            "rates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["unit", "price"],
+                "properties": {
+                  "unit": {
+                    "type": "string",
+                    "description": "Billing unit (request, token, byte, compute_second, query, record, month)"
+                  },
+                  "price": {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$",
+                    "description": "Cost per unit as decimal string"
+                  },
+                  "description": { "type": "string" },
+                  "tier": { "type": ["string", "null"] },
+                  "threshold": { "type": ["integer", "null"] },
+                  "cap": { "type": ["integer", "null"] }
+                }
+              },
+              "description": "Rate definitions"
+            },
+            "onboarding": {
+              "type": "object",
+              "required": ["url", "method", "accepts", "returns"],
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "method": { "type": "string", "enum": ["POST", "PUT"] },
+                "accepts": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "string",
+                    "enum": ["signed_jwt", "platform_token", "oauth_bearer"]
+                  },
+                  "description": "Credential types the onboarding endpoint accepts"
+                },
+                "returns": {
+                  "type": "object",
+                  "required": ["credential_type", "credential_field", "instructions"],
+                  "properties": {
+                    "credential_type": {
+                      "type": "string",
+                      "enum": ["api_key", "bearer_token", "session_token", "subscription_id"]
+                    },
+                    "credential_field": { "type": "string" },
+                    "instructions": { "type": "string" },
+                    "expires_in": { "type": ["integer", "null"] },
+                    "refresh_url": { "type": ["string", "null"], "format": "uri" }
+                  }
+                }
+              },
+              "description": "Autonomous payment onboarding endpoint"
+            },
+            "usage_endpoint": {
+              "type": "object",
+              "required": ["url", "method", "authentication"],
+              "properties": {
+                "url": { "type": "string", "format": "uri" },
+                "method": { "type": "string", "enum": ["GET", "POST"] },
+                "authentication": {
+                  "type": "string",
+                  "enum": ["same_as_api", "onboarding_credential"]
+                }
+              },
+              "description": "Usage/spend checking endpoint"
+            },
+            "settlement": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["real_time", "postpaid_cycle", "prepaid_debit"]
+                },
+                "cycle": {
+                  "type": ["string", "null"],
+                  "enum": ["daily", "weekly", "monthly", "quarterly", "annual", null]
+                },
+                "provider_name": { "type": ["string", "null"] },
+                "provider_url": { "type": ["string", "null"], "format": "uri" }
+              }
+            },
+            "budget_controls": {
+              "type": "object",
+              "properties": {
+                "supports_spend_cap": { "type": "boolean", "default": false },
+                "supports_per_request_limit": { "type": "boolean", "default": false },
+                "supports_rate_limit": { "type": "boolean", "default": false },
+                "supports_alerting": { "type": "boolean", "default": false }
+              }
+            },
+            "refund_policy": {
+              "type": "object",
+              "required": ["type"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["none", "full", "partial", "prorated", "credit"]
+                },
+                "terms_url": { "type": ["string", "null"], "format": "uri" },
+                "window_seconds": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            }
+          },
+          "if": { "required": ["protocol"] },
+          "then": { "required": ["networks"] },
+          "description": "Machine-executable payment contract"
+        }
+      ]
+    },
+    "authentication": {
+      "type": "object",
+      "required": ["required"],
+      "properties": {
+        "required": { "type": "boolean" },
+        "type": {
+          "type": ["string", "null"],
+          "enum": ["api_key", "oauth2", "bearer", "none", null]
+        },
+        "instructions": { "type": ["string", "null"] },
+        "config": { "type": "object" }
+      },
+      "description": "Authentication requirements"
+    },
+    "reliability": {
+      "type": "object",
+      "properties": {
+        "maintained_by": {
+          "type": "string",
+          "enum": ["individual", "organization", "community"]
+        },
+        "status_url": { "type": ["string", "null"], "format": "uri" },
+        "expected_uptime_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "uptime_percentage": { "type": "number", "minimum": 0, "maximum": 100 },
+        "avg_response_time_ms": { "type": "integer", "minimum": 0 },
+        "last_30_days_uptime": { "type": "number", "minimum": 0, "maximum": 100 }
+      },
+      "description": "Reliability information"
+    },
+    "rate_limits": {
+      "type": "object",
+      "properties": {
+        "requests_per_minute": { "type": ["integer", "null"], "minimum": 0 },
+        "requests_per_day": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "agent_notes": {
+      "type": "string",
+      "minLength": 150,
+      "description": "Operational guidance for AI agents"
+    },
+    "contact": {
+      "description": "Contact email, URL, or object",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "email": { "type": "string", "format": "email" },
+            "support_url": { "type": "string", "format": "uri" },
+            "github": { "type": "string", "format": "uri" }
+          }
+        }
+      ]
+    },
+    "listing_requested": {
+      "type": "boolean",
+      "description": "Whether API requests public listing"
+    },
+    "last_updated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last manifest update"
+    }
+  },
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "payment": {
+            "type": "object",
+            "properties": { "model": { "not": { "const": "free" } } },
+            "not": { "required": ["protocol"] }
+          }
+        },
+        "required": ["payment"]
+      },
+      "then": {
+        "properties": {
+          "payment": {
+            "required": ["onboarding"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "payment": {
+            "type": "object",
+            "properties": {
+              "settlement": {
+                "type": "object",
+                "properties": { "type": { "const": "postpaid_cycle" } }
+              }
+            }
+          }
+        },
+        "required": ["payment"]
+      },
+      "then": {
+        "properties": {
+          "payment": {
+            "properties": {
+              "settlement": {
+                "required": ["type", "cycle"],
+                "properties": {
+                  "cycle": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

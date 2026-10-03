@@ -1,0 +1,31 @@
+# Smithery configuration: https://smithery.ai/docs/build/project-config
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    description: Optional tuning for AMP MCP (all fields optional).
+    properties:
+      AMP_FETCH_TIMEOUT_MS:
+        type: integer
+        minimum: 1000
+        maximum: 120000
+        default: 15000
+        description: Timeout in milliseconds when fetching manifests over HTTP.
+      AMP_VALIDATOR_URL:
+        type: string
+        format: uri
+        default: "https://validator.agent-manifest.com"
+        description: Base URL for the public AMP validator (used for optional remote checks).
+    additionalProperties: false
+  commandFunction: |
+    (config) => ({
+      command: 'node',
+      args: ['dist/index.js'],
+      env: {
+        AMP_FETCH_TIMEOUT_MS: String(config.AMP_FETCH_TIMEOUT_MS ?? 15000),
+        AMP_VALIDATOR_URL: config.AMP_VALIDATOR_URL ?? 'https://validator.agent-manifest.com',
+      },
+    })
+  exampleConfig:
+    AMP_FETCH_TIMEOUT_MS: 15000
+    AMP_VALIDATOR_URL: "https://validator.agent-manifest.com"
