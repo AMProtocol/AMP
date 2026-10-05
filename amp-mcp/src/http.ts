@@ -22,6 +22,23 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'amp-mcp', transport: 'sse' });
 });
 
+app.get('/', (req, res) => {
+  const accept = req.get('accept') ?? '';
+  if (accept.includes('application/json') || accept.includes('application/*')) {
+    res.json({
+      service: 'amp-mcp',
+      transport: 'sse',
+      sse: MCP_SSE_PATH,
+      messages: MCP_MESSAGES_PATH,
+      health: '/health',
+      human_docs: 'https://agent-manifest.com/#integrate',
+      stdio: 'npx -y @agentmanifest/mcp-server@0.1.5',
+    });
+    return;
+  }
+  res.redirect(302, 'https://agent-manifest.com/#integrate');
+});
+
 app.get(MCP_SSE_PATH, async (req, res) => {
   try {
     const transport = new SSEServerTransport(MCP_MESSAGES_PATH, res);
